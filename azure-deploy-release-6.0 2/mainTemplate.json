@@ -1,0 +1,172 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the existing HDInsight cluster to be used"
+      }
+    },
+    "galleryPackageIdentity": {
+      "type": "string",
+      "metadata": {
+        "description": "Identity of the gallery package for the application.",
+        "trifactaComment": "Do not change this key."
+      },
+      "defaultValue": "wrangler-enterprise"
+    },
+    "edgeNodeSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual machine type for the Trifacta edge node",
+        "trifactaComment": "Do not change this key."
+      },
+      "defaultValue": "Standard_D13_V2",
+      "allowedValues": [
+        "Standard_A4",
+        "Standard_D4_V2",
+        "Standard_D5_V2",
+        "Standard_D12_V2",
+        "Standard_D13_V2",
+        "Standard_D14_V2",
+        "Standard_D15_V2"
+      ]
+    },
+    "trifactaVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Trifacta application version to deploy"
+      },
+      "defaultValue": "6.0.2",
+      "allowedValues": [
+        "6.0.0",
+        "6.0.1",
+        "6.0.2"
+      ]
+    },
+    "applicationName": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique (per-cluster) application name for the Trifacta edge node",
+        "trifactaComment": "Do not change this key."
+      },
+      "defaultValue": "trifacta"
+    },
+    "subdomainApplicationURISuffix": {
+      "type": "string",
+      "maxLength": 3,
+      "metadata": {
+        "description": "Unique (per cluster) three-character alphanumeric string used in the application's DNS name."
+      },
+      "defaultValue": "tri"
+    },
+    "DirectoryID": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Active Directory directory ID for the registered application. Required."
+      },
+      "defaultValue": "<AAD_DIRECTORY_ID>"
+    },
+    "ApplicationID": {
+      "type": "string",
+      "metadata": {
+        "description": "Registered application's ID. Required."
+      },
+      "defaultValue": "<APPLICATION_ID>"
+    },
+    "Secret": {
+      "type": "secureString",
+      "metadata": {
+        "description": "Registered application's key. Required."
+      },
+      "defaultValue": "<APPLICATION_SECRET>"
+    },
+    "KeyVaultUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault URL. Required for Azure Data Lake Store access."
+      },
+      "defaultValue": "https://KEY_VAULT_NAME.vault.azure.net/"
+    },
+    "SasToken": {
+      "type": "string",
+      "metadata": {
+        "description": "Shared Access Signature token. Required for Blob Storage access."
+      },
+      "defaultValue": "<WASB_SAS_TOKEN>"
+    }
+  },
+  "variables": {
+    "trifactaVersionShort": "[replace(parameters('trifactaVersion'), '.', '')]",
+    "branch": "release/6.0",
+    "baseUri": "[concat('https://raw.githubusercontent.com/trifacta/azure-deploy/', variables('branch'))]",
+    "armTemplateVersion": "1",
+    "trifactaDownloadAccessSignature": "sr=c&si=trifacta-deploy-public-read&sig=ksMPhDkLpJYPEXnRNp4vAdo6QQ9ulpP%2BM4Gsi/nea%2Bg%3D&sv=2016-05-31"
+  },
+  "resources": [
+    {
+      "apiVersion": "2016-09-01",
+      "name": "pid-9ce61f92-f188-470c-b332-cc0804fd8996",
+      "type": "Microsoft.Resources/deployments",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": []
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('clusterName'), '/', parameters('applicationName'))]",
+      "type": "Microsoft.HDInsight/clusters/applications",
+      "apiVersion": "2015-03-01-preview",
+      "dependsOn": [],
+      "properties": {
+        "marketPlaceIdentifier": "[parameters('galleryPackageIdentity')]",
+        "computeProfile": {
+          "roles": [
+            {
+              "name": "edgenode",
+              "targetInstanceCount": 1,
+              "hardwareProfile": {
+                "vmSize": "[parameters('edgeNodeSize')]"
+              }
+            }
+          ]
+        },
+        "installScriptActions": [
+          {
+            "name": "[concat('trifacta-', variables('trifactaVersionShort'), '-', variables('armTemplateVersion'), '-', uniquestring(parameters('applicationName')))]",
+            "uri": "[concat(variables('baseUri'), '/bin/deploy.sh')]",
+            "parameters": "[concat('-v \"', parameters('trifactaVersion'), '\" -B \"', variables('branch'), '\" -s \"', variables('trifactaDownloadAccessSignature'), '\" -d \"', parameters('DirectoryID'), '\" -a \"', parameters('ApplicationID'), '\" -S \"', parameters('Secret'), '\" -K \"', parameters('KeyVaultUrl'), '\" -t \"', parameters('SasToken'), '\"')]",
+            "roles": ["edgenode"]
+          }
+        ],
+        "uninstallScriptActions": [
+          {
+            "name": "[concat('trifacta-uninstall-', variables('trifactaVersionShort'), '-', variables('armTemplateVersion'), '-', uniquestring(parameters('applicationName')))]",
+            "uri": "[concat(variables('baseUri'), '/bin/uninstall.sh')]",
+            "roles": ["edgenode"]
+          }
+        ],
+        "httpsEndpoints": [
+          {
+            "subDomainSuffix": "[parameters('subdomainApplicationURISuffix')]",
+            "destinationPort": 3005,
+            "accessModes": ["webpage"],
+            "disableGatewayAuth": true
+          }
+        ],
+        "applicationType": "CustomApplication"
+      }
+    }
+  ],
+  "outputs": {
+    "application": {
+      "type": "object",
+      "value": "[reference(resourceId('Microsoft.HDInsight/clusters/applications/', parameters('clusterName'), parameters('applicationName')))]"
+    }
+  }
+}

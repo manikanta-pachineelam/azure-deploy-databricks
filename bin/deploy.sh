@@ -3,7 +3,7 @@
 set -exo pipefail
 
 version="6.0.2"
-branch="release/6.0"
+branch="master"
 directory_id="DIRECTORY_ID"
 application_id="APPLICATION_ID"
 secret="APPLICATION_SECRET"
@@ -84,7 +84,10 @@ if [[ -z ${secret+x} ]]; then
   LogError "Application Secret must be specified (via -S option)"
 fi
 
-base_uri="https://raw.githubusercontent.com/trifacta/azure-deploy/$branch"
+#base_uri="https://raw.githubusercontent.com/trifacta/azure-deploy/$branch"
+#bindir_uri="$base_uri/bin"
+
+base_uri="https://raw.githubusercontent.com/mpachineelam/azure-deploy-databricks/$branch"
 bindir_uri="$base_uri/bin"
 
 function RunScript() {

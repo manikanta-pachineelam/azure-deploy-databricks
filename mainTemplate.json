@@ -2,12 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "clusterName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the existing HDInsight cluster to be used"
-      }
-    },
     "galleryPackageIdentity": {
       "type": "string",
       "metadata": {
@@ -16,10 +10,22 @@
       },
       "defaultValue": "wrangler-enterprise"
     },
+     "vmDnsName": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the unique DNS name of the for the public IP for your VM"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the username you wish to assign to your VMs admin account"
+      }
+    },
     "edgeNodeSize": {
       "type": "string",
       "metadata": {
-        "description": "Virtual machine type for the Trifacta edge node",
+        "description": "Virtual machine type for the Trifacta node",
         "trifactaComment": "Do not change this key."
       },
       "defaultValue": "Standard_D13_V2",
@@ -33,6 +39,23 @@
         "Standard_D15_V2"
       ]
     },
+        "authenticationType": {
+      "type": "string",
+      "defaultValue": "sshPublicKey",
+      "allowedValues": [
+        "sshPublicKey",
+        "password"
+      ],
+      "metadata": {
+        "description": "Type of authentication to use on the Virtual Machine. SSH key is recommended."
+      }
+    },
+    "adminPasswordOrKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH Key or password for the Virtual Machine. SSH key is recommended."
+      }
+    },
     "trifactaVersion": {
       "type": "string",
       "metadata": {
@@ -40,15 +63,13 @@
       },
       "defaultValue": "6.0.2",
       "allowedValues": [
-        "6.0.0",
-        "6.0.1",
         "6.0.2"
       ]
     },
     "applicationName": {
       "type": "string",
       "metadata": {
-        "description": "Unique (per-cluster) application name for the Trifacta edge node",
+        "description": "Unique (per-cluster) application name for the Trifacta node",
         "trifactaComment": "Do not change this key."
       },
       "defaultValue": "trifacta"
@@ -102,71 +123,158 @@
     "branch": "release/6.0",
     "baseUri": "[concat('https://raw.githubusercontent.com/trifacta/azure-deploy/', variables('branch'))]",
     "armTemplateVersion": "1",
-    "trifactaDownloadAccessSignature": "sr=c&si=trifacta-deploy-public-read&sig=ksMPhDkLpJYPEXnRNp4vAdo6QQ9ulpP%2BM4Gsi/nea%2Bg%3D&sv=2016-05-31"
+    "trifactaDownloadAccessSignature": "sr=c&si=trifacta-deploy-public-read&sig=ksMPhDkLpJYPEXnRNp4vAdo6QQ9ulpP%2BM4Gsi/nea%2Bg%3D&sv=2016-05-31",
+    "nicName": "VMNic",
+    "addressPrefix": "10.0.0.0/16",
+    "imagePublisher": "Canonical",
+    "imageVersion": "latest",
+    "imageSKU": "14.04.5-LTS",
+    "imageOffer": "UbuntuServer",
+    "subnetName": "Subnet-1",
+    "subnetPrefix": "10.0.0.0/24",
+    "storageAccountType": "Standard_LRS",
+    "publicIPAddressName": "publicIP",
+    "publicIPAddressType": "Dynamic",
+    "vmName": "[parameters('vmDnsName')]",
+    "virtualNetworkName": "WPVNET",
+    "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrKey')]"
+          }
+        ]
+      }
+    }
   },
   "resources": [
     {
-      "apiVersion": "2016-09-01",
-      "name": "pid-9ce61f92-f188-470c-b332-cc0804fd8996",
-      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[parameters('location')]",
       "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "resources": []
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('vmDnsName')]"
         }
       }
     },
     {
-      "name": "[concat(parameters('clusterName'), '/', parameters('applicationName'))]",
-      "type": "Microsoft.HDInsight/clusters/applications",
-      "apiVersion": "2015-03-01-preview",
-      "dependsOn": [],
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[parameters('location')]",
       "properties": {
-        "marketPlaceIdentifier": "[parameters('galleryPackageIdentity')]",
-        "computeProfile": {
-          "roles": [
-            {
-              "name": "edgenode",
-              "targetInstanceCount": 1,
-              "hardwareProfile": {
-                "vmSize": "[parameters('edgeNodeSize')]"
-              }
-            }
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
           ]
         },
-        "installScriptActions": [
+        "subnets": [
           {
-            "name": "[concat('trifacta-', variables('trifactaVersionShort'), '-', variables('armTemplateVersion'), '-', uniquestring(parameters('applicationName')))]",
-            "uri": "[concat(variables('baseUri'), '/bin/deploy.sh')]",
-            "parameters": "[concat('-v \"', parameters('trifactaVersion'), '\" -B \"', variables('branch'), '\" -s \"', variables('trifactaDownloadAccessSignature'), '\" -d \"', parameters('DirectoryID'), '\" -a \"', parameters('ApplicationID'), '\" -S \"', parameters('Secret'), '\" -K \"', parameters('KeyVaultUrl'), '\" -t \"', parameters('SasToken'), '\"')]",
-            "roles": ["edgenode"]
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetPrefix')]"
+            }
           }
-        ],
-        "uninstallScriptActions": [
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
           {
-            "name": "[concat('trifacta-uninstall-', variables('trifactaVersionShort'), '-', variables('armTemplateVersion'), '-', uniquestring(parameters('applicationName')))]",
-            "uri": "[concat(variables('baseUri'), '/bin/uninstall.sh')]",
-            "roles": ["edgenode"]
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              }
+            }
           }
-        ],
-        "httpsEndpoints": [
-          {
-            "subDomainSuffix": "[parameters('subdomainApplicationURISuffix')]",
-            "destinationPort": 3005,
-            "accessModes": ["webpage"],
-            "disableGatewayAuth": true
+        ]
+      }
+    },
+    {
+      "apiVersion": "2017-03-30",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPasswordOrKey')]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), json('null'), variables('linuxConfiguration'))]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[variables('imageSKU')]",
+            "version": "[variables('imageVersion')]"
+          },
+          "osDisk": {
+            "name": "[concat(variables('vmName'), '_OSDisk')]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[variables('storageAccountType')]"
+            }
           }
-        ],
-        "applicationType": "CustomApplication"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'),'/newuserscript')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.0",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "https://raw.githubusercontent.com/trifacta/azure-deploy/release/6.0/deploy.sh"
+          ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[concat('sh deploy.sh ', '-v \"', parameters('trifactaVersion'), '\" -B \"', variables('branch'), '\" -s \"', variables('trifactaDownloadAccessSignature'), '\" -d \"', parameters('DirectoryID'), '\" -a \"', parameters('ApplicationID'), '\" -S \"', parameters('Secret'), '\" -K \"', parameters('KeyVaultUrl'), '\" -t \"', parameters('SasToken'), '\"')]"
+        }
       }
     }
-  ],
-  "outputs": {
-    "application": {
-      "type": "object",
-      "value": "[reference(resourceId('Microsoft.HDInsight/clusters/applications/', parameters('clusterName'), parameters('applicationName')))]"
-    }
-  }
+  ]
 }

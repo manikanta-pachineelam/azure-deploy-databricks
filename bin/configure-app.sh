@@ -489,8 +489,8 @@ EOF
 BackupFile "$triconf"
 
 CreateCustomerKey
-CreateHdfsDirectories
-CopyHadoopConfigFiles
+#CreateHdfsDirectories
+#CopyHadoopConfigFiles
 
 ConfigurePostgres
 CreateDBRoles
@@ -499,7 +499,7 @@ ConfigureEdgeNode
 ConfigureSecureTokenService
 ConfigureUdfService
 ConfigureAzureCommon
-ConfigureHDI
+#ConfigureHDI
 
-StartTrifacta
-CreateHiveConnection
+#StartTrifacta
+#CreateHiveConnection

@@ -275,7 +275,7 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "fileUris": [
-            "https://raw.githubusercontent.com/trifacta/azure-deploy/release/6.0/deploy.sh"
+            "https://raw.githubusercontent.com/mpachineelam/azure-deploy-databricks/master/deploy.sh"
           ]
         },
         "protectedSettings": {

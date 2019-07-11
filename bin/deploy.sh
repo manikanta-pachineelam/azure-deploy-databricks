@@ -16,7 +16,7 @@ scripts="
 configure-app.sh
 configure-db.sh
 install-app.sh
-prepare-edge-node.sh
+prepare-trifacta-node.sh
 uninstall.sh
 util.sh"
 

@@ -275,7 +275,7 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "fileUris": [
-            "https://raw.githubusercontent.com/mpachineelam/azure-deploy-databricks/master/deploy.sh"
+            "https://raw.githubusercontent.com/mpachineelam/azure-deploy-databricks/master/bin/deploy.sh"
           ]
         },
         "protectedSettings": {

@@ -56,6 +56,13 @@
         "description": "SSH Key or password for the Virtual Machine. SSH key is recommended."
       }
     },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
     "trifactaVersion": {
       "type": "string",
       "metadata": {

@@ -16,8 +16,8 @@ LogInfo "Setting up PostgreSQL repository"
 echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 wget -q -O - "https://www.postgresql.org/media/keys/ACCC4CF8.asc" | apt-key add -
 
-LogInfo "Start PostgreSQL upon VM boot"
-systemctl enable postgresql
+#LogInfo "Start PostgreSQL upon VM boot"  -- Cannot invoke this for Databricks - No postgres exists
+#systemctl enable postgresql
 
 LogInfo "Installing deployment dependencies"
 apt-get install -y bc libxml2-utils jq moreutils
@@ -30,4 +30,4 @@ apt-get install --reinstall python-pkg-resources
 
 set +e
 LogInfo "Removing conflicting nginx package"
-apt-get purge -y hdinsight-nginx nginx nginx-common nginx-core || true
+apt-get purge -y nginx nginx-common nginx-core || true

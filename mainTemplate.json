@@ -279,7 +279,7 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('sh deploy.sh ', '-v \"', parameters('trifactaVersion'), '\" -B \"', variables('branch'), '\" -s \"', variables('trifactaDownloadAccessSignature'), '\" -d \"', parameters('DirectoryID'), '\" -a \"', parameters('ApplicationID'), '\" -S \"', parameters('Secret'), '\" -K \"', parameters('KeyVaultUrl'), '\" -t \"', parameters('SasToken'), '\"')]"
+          "commandToExecute": "[concat('bash deploy.sh ', '-v \"', parameters('trifactaVersion'), '\" -B \"', variables('branch'), '\" -s \"', variables('trifactaDownloadAccessSignature'), '\" -d \"', parameters('DirectoryID'), '\" -a \"', parameters('ApplicationID'), '\" -S \"', parameters('Secret'), '\" -K \"', parameters('KeyVaultUrl'), '\" -t \"', parameters('SasToken'), '\"')]"
         }
       }
     }

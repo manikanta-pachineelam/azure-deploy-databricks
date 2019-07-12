@@ -87,7 +87,7 @@ fi
 #base_uri="https://raw.githubusercontent.com/trifacta/azure-deploy/$branch"
 #bindir_uri="$base_uri/bin"
 
-base_uri="https://raw.githubusercontent.com/mpachineelam/azure-deploy-databricks/$branch"
+base_uri="https://raw.githubusercontent.com/manikanta-pachineelam/azure-deploy-databricks/$branch"
 bindir_uri="$base_uri/bin"
 
 function RunScript() {
